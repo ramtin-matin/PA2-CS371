@@ -183,8 +183,9 @@ void run_server() {
         int bytes_received = recvfrom(server_fd, buf, MESSAGE_SIZE, 0,
                                       (struct sockaddr *)&client_addr, &client_len);
         if (bytes_received > 0) {
-            sendto(server_fd, buf, bytes_received, 0,
-                   (struct sockaddr *)&client_addr, client_len);
+    usleep(100);  // Add 100 microseconds delay per packet
+    sendto(server_fd, buf, bytes_received, 0,
+           (struct sockaddr *)&client_addr, client_len);
         }
     }
 }
