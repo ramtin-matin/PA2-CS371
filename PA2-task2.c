@@ -116,6 +116,12 @@ void *client_thread_func(void *arg) {
         data->request_rate = 0;
     }
 
+    long retransmits = data->tx_cnt - data->rx_cnt;
+    long true_lost = (data->rx_cnt < num_requests) ? (num_requests - data->rx_cnt) : 0;
+
+    printf("[Client Thread] Sent: %ld, Received: %ld, Retransmits: %ld, True Lost: %ld\n",
+           data->tx_cnt, data->rx_cnt, retransmits, true_lost);
+
     close(data->socket_fd);
     close(data->epoll_fd);
     return NULL;
@@ -170,7 +176,8 @@ void run_client() {
     printf("Total Messages: %ld, Total RTT: %lld us\n", total_messages, total_rtt);
     printf("Average RTT: %lld us\n", (total_messages > 0) ? (total_rtt / total_messages) : 0);
     printf("Total Request Rate: %.2f messages/s\n", total_request_rate);
-    printf("TX: %ld, RX: %ld, Lost: %ld packets\n", total_tx, total_rx, total_tx - total_rx);
+    printf("TX: %ld, RX: %ld, Retransmits: %ld, True Lost: %ld\n",
+           total_tx, total_rx, total_tx - total_rx, (total_rx < num_client_threads * num_requests) ? (num_client_threads * num_requests - total_rx) : 0);
 }
 
 void run_server() {
