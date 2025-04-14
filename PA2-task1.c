@@ -72,9 +72,9 @@ void *client_thread_func(void *arg) {
         }
         data->tx_cnt++;
 
-        int nfds = epoll_wait(data->epoll_fd, events, MAX_EVENTS, 2000);
-        if (nfds == -1) {
-            perror("epoll_wait");
+        int nfds = epoll_wait(data->epoll_fd, events, MAX_EVENTS, 500); // 0.5s timeout
+        if (nfds <= 0) {
+            // Timeout or error — count as packet lost
             continue;
         }
 
@@ -173,6 +173,7 @@ void run_server() {
 
     if (bind(server_fd, (struct sockaddr *)&server_addr, sizeof(server_addr)) == -1) {
         perror("bind");
+        close(server_fd);
         exit(EXIT_FAILURE);
     }
 
@@ -183,20 +184,35 @@ void run_server() {
         int bytes_received = recvfrom(server_fd, buf, MESSAGE_SIZE, 0,
                                       (struct sockaddr *)&client_addr, &client_len);
         if (bytes_received > 0) {
-   usleep(1000);  // Add 100 microseconds delay per packet
-    sendto(server_fd, buf, bytes_received, 0,
-           (struct sockaddr *)&client_addr, client_len);
+            usleep(1000);  // Simulate server delay
+            sendto(server_fd, buf, bytes_received, 0,
+                   (struct sockaddr *)&client_addr, client_len);
         }
     }
+
+    close(server_fd); // just in case we break the loop someday
 }
 
 int main(int argc, char *argv[]) {
-    if (argc > 1 && strcmp(argv[1], "server") == 0) {
+    if (argc != 6) {
+        printf("Usage: %s <server|client> <server_ip> <server_port> <num_client_threads> <num_requests>\n", argv[0]);
+        return 1;
+    }
+
+    server_ip = argv[2];
+    server_port = atoi(argv[3]);
+    num_client_threads = atoi(argv[4]);
+    num_requests = atoi(argv[5]);
+
+    if (strcmp(argv[1], "server") == 0) {
         run_server();
-    } else if (argc > 1 && strcmp(argv[1], "client") == 0) {
+    } else if (strcmp(argv[1], "client") == 0) {
         run_client();
     } else {
-        printf("Usage: %s <server|client>\n", argv[0]);
+        printf("Invalid mode. Use 'server' or 'client'.\n");
+        return 1;
     }
+
     return 0;
 }
+
